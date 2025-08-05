@@ -40,3 +40,8 @@ sudo apt-get install -y \
 docker pull kasmweb/core-ubuntu-jammy:develop
 
 6. run build.sh
+
+
+
+pm2 start yarn --name "admin_front" -- start
+pm2 logs admin_front
