@@ -12,7 +12,7 @@ export const MainProvider = ({ children }) => {
 
   const { axiosServices } = useAuth();
 
-  const getAppList = async () => {
+  const getServerList = async () => {
     try {
       const response = await axiosServices.get('/servers', { withCredentials: true });
       dispatch({
@@ -71,7 +71,7 @@ export const MainProvider = ({ children }) => {
     <MainContext.Provider
       value={{
         ...state,
-        getAppList,
+        getServerList,
         createServer,
         updateServer,
         deleteServer
