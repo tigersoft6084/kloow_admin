@@ -9,16 +9,13 @@ import { AuthProvider } from 'contexts/AuthContext';
 import { SnackbarProvider } from 'contexts/SnackbarContext';
 //Admin
 import ProjectRoutes from 'route';
-import Layout from 'layout';
 
 const App = () => {
   return (
     <BrowserRouter>
       <SnackbarProvider>
         <AuthProvider>
-          <Layout>
-            <ProjectRoutes />
-          </Layout>
+          <ProjectRoutes />
         </AuthProvider>
       </SnackbarProvider>
     </BrowserRouter>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Outlet, useRoutes } from 'react-router-dom';
 
+import Layout from 'layout';
+
 import GuestGuard from 'utils/route/GuestGuard';
 import AuthGuard from 'utils/route/AuthGuard';
 import { MainProvider } from 'contexts/MainContext';
@@ -21,7 +23,9 @@ const AuthRoutes = {
   path: 'auth',
   element: (
     <GuestGuard>
-      <Outlet />
+      <Layout>
+        <Outlet />
+      </Layout>
     </GuestGuard>
   ),
   children: [

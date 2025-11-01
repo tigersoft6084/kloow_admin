@@ -1,7 +1,7 @@
 import React, { createContext, useReducer } from 'react';
 import PropTypes from 'prop-types';
 
-import { SERVER_LIST } from 'reducers/actions';
+import { SERVER_LIST, IMAGE_APP_LIST, MEMBERSHIP_PLAN_LIST, APP_LIST } from 'reducers/actions';
 import MainReducer, { initialState } from 'reducers/main';
 import useAuth from 'hooks/useAuth';
 
@@ -67,6 +67,169 @@ export const MainProvider = ({ children }) => {
     }
   };
 
+  const uploadImages = async (applicationName, thumbImage, logoImage) => {
+    try {
+      const formData = new FormData();
+      formData.append('applicationName', applicationName);
+      formData.append('thumbImage', thumbImage);
+      formData.append('logoImage', logoImage);
+
+      const response = await axiosServices.post('/upload_images', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+      dispatch({
+        type: IMAGE_APP_LIST,
+        payload: { imageAppList: response.data.images }
+      });
+      return {
+        status: true,
+        message: response.data.message || 'Images uploaded successfully'
+      };
+    } catch (error) {
+      return {
+        status: false,
+        message: error.response?.data?.message || error.message || 'Image upload failed'
+      };
+    }
+  };
+
+  const getAppListForImages = async () => {
+    try {
+      const response = await axiosServices.get('/images', { withCredentials: true });
+      dispatch({
+        type: IMAGE_APP_LIST,
+        payload: { imageAppList: response.data.images }
+      });
+      return { status: true, message: '' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message || 'Failed to fetch server list' };
+    }
+  };
+
+  const deleteAppForImages = async (id) => {
+    try {
+      const response = await axiosServices.delete(`/images/${id}`, { withCredentials: true });
+      // Refresh the app list after deletion
+      dispatch({
+        type: IMAGE_APP_LIST,
+        payload: { imageAppList: response.data.images }
+      });
+      return { status: true, message: response.data.message || 'Application deleted successfully' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message };
+    }
+  };
+
+  const createMembershipPlan = async (membershipData) => {
+    try {
+      const response = await axiosServices.post('/membership_plans', membershipData, { withCredentials: true });
+      dispatch({
+        type: MEMBERSHIP_PLAN_LIST,
+        payload: { membershipPlanList: response.data.membership_plans }
+      });
+      return { status: true, message: response.data.message || 'Membership plan created successfully' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message };
+    }
+  };
+
+  const updateMembershipPlan = async (id, membershipData) => {
+    try {
+      const response = await axiosServices.put(`/membership_plans/${id}`, membershipData, { withCredentials: true });
+      dispatch({
+        type: MEMBERSHIP_PLAN_LIST,
+        payload: { membershipPlanList: response.data.membership_plans }
+      });
+      return { status: true, message: response.data.message || 'Membership plan updated successfully' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message };
+    }
+  };
+
+  const deleteMembershipPlan = async (id) => {
+    try {
+      const response = await axiosServices.delete(`/membership_plans/${id}`, { withCredentials: true });
+      dispatch({
+        type: MEMBERSHIP_PLAN_LIST,
+        payload: { membershipPlanList: response.data.membership_plans }
+      });
+      return { status: true, message: response.data.message || 'Membership plan deleted successfully' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message };
+    }
+  };
+
+  const getMembershipPlanList = async () => {
+    try {
+      const response = await axiosServices.get('/membership_plans', { withCredentials: true });
+      dispatch({
+        type: MEMBERSHIP_PLAN_LIST,
+        payload: { membershipPlanList: response.data.membership_plans }
+      });
+      return { status: true, message: '' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message || 'Failed to fetch membership plan list' };
+    }
+  };
+
+  const getAppList = async () => {
+    try {
+      const response = await axiosServices.get('/app_list', { withCredentials: true });
+      dispatch({
+        type: APP_LIST,
+        payload: { appList: response.data.appList }
+      });
+      return { status: true, message: '' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message || 'Failed to fetch app list' };
+    }
+  };
+
+  const getWpServerMembershipPlanMatching = async () => {
+    try {
+      const response = await axiosServices.get('/wp_server_membership_plan_matching', { withCredentials: true });
+      return { status: true, data: response.data.matchings || [], message: '' };
+    } catch (error) {
+      return { status: false, data: [], message: error.response?.data?.message || error.message || 'Failed to fetch matching data' };
+    }
+  };
+
+  const updatetWpServerMembershipPlanMatching = async (matchings) => {
+    try {
+      const response = await axiosServices.put('/wp_server_membership_plan_matching', { matchings }, { withCredentials: true });
+      return { status: true, data: response.data.matchings || [], message: response.data.message || 'Matching data set successfully' };
+    } catch (error) {
+      return {
+        status: false,
+        data: [],
+        message: error.response?.data?.message || error.message || 'Failed to set matching data, Please try again'
+      };
+    }
+  };
+
+  const getAllowedApps = async () => {
+    try {
+      const response = await axiosServices.get('/allowed_apps', { withCredentials: true });
+      return { status: true, data: response.data.allowed_apps || [], message: '' };
+    } catch (error) {
+      return { status: false, data: [], message: error.response?.data?.message || error.message || 'Failed to fetch allowed apps' };
+    }
+  };
+
+  const updateAllowedApps = async (allowed_apps) => {
+    try {
+      const response = await axiosServices.put('/allowed_apps', { allowed_apps }, { withCredentials: true });
+      return {
+        status: true,
+        data: response.data.allowed_apps || [],
+        message: response.data.message || 'Allowed apps updated successfully'
+      };
+    } catch (error) {
+      return { status: false, data: [], message: error.response?.data?.message || error.message || 'Failed to update allowed apps' };
+    }
+  };
+
   return (
     <MainContext.Provider
       value={{
@@ -74,7 +237,19 @@ export const MainProvider = ({ children }) => {
         getServerList,
         createServer,
         updateServer,
-        deleteServer
+        deleteServer,
+        uploadImages,
+        getAppListForImages,
+        deleteAppForImages,
+        createMembershipPlan,
+        updateMembershipPlan,
+        deleteMembershipPlan,
+        getMembershipPlanList,
+        getAppList,
+        getWpServerMembershipPlanMatching,
+        updatetWpServerMembershipPlanMatching,
+        getAllowedApps,
+        updateAllowedApps
       }}
     >
       {children}
