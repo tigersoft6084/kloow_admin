@@ -19,9 +19,11 @@ import {
   Grid,
   Switch,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  InputAdornment
 } from '@mui/material';
-import { LogoutOutlined } from '@ant-design/icons';
+import { LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, VisibilityOffOutlined, VisibilityOutlined } from '@mui/icons-material';
 import SummaryCard from 'components/SummaryCard';
 import AlertCard from 'components/AlertCard';
 import SimpleBarScroll from 'components/SimpleBar';
@@ -29,15 +31,18 @@ import SimpleBarScroll from 'components/SimpleBar';
 import * as Yup from 'yup';
 import { Formik } from 'formik';
 import FocusError from 'components/FocusError';
+import { sleep } from 'utils/common';
 
 import useSnackbar from 'hooks/useSnackbar';
 import useAuth from 'hooks/useAuth';
-import { DeleteOutlined, EditOutlined } from '@mui/icons-material';
 
 const Dashboard = () => {
   const {
+    updatePassword,
     getServerList,
+    getWordpressServerList,
     serverList,
+    wpMembershipList,
     createServer,
     updateServer,
     deleteServer,
@@ -45,15 +50,8 @@ const Dashboard = () => {
     getAppListForImages,
     imageAppList,
     deleteAppForImages,
-    getMembershipPlanList,
-    membershipPlanList,
-    createMembershipPlan,
-    updateMembershipPlan,
-    deleteMembershipPlan,
     getAppList,
     appList,
-    getWpServerMembershipPlanMatching,
-    updatetWpServerMembershipPlanMatching,
     getAllowedApps,
     updateAllowedApps
   } = useMain();
@@ -105,31 +103,24 @@ const Dashboard = () => {
   const handleDeleteAppOpen = () => setOpenDeleteApp(true);
   const handleDeleteAppClose = () => setOpenDeleteApp(false);
 
-  const [membershipPlanToEdit, setMembershipPlanToEdit] = useState(null);
-  const [deleteMembershipPlanID, setDeleteMembershipPlanID] = useState(null);
-  const [isMembershipPlanDeleting, setIsMembershipPlanDeleting] = useState(false);
-
-  const [openDeleteMembershipPlan, setOpenDeleteMembershipPlan] = useState(false);
-  const handleDeleteMembershipPlanOpen = () => setOpenDeleteMembershipPlan(true);
-  const handleDeleteMembershipPlanClose = () => setOpenDeleteMembershipPlan(false);
-
-  const [openMembershipPlan, setOpenMembershipPlan] = useState(false);
-  const handleOpenMembershipPlan = () => setOpenMembershipPlan(true);
-  const handleCloseMembershipPlan = () => setOpenMembershipPlan(false);
-
-  const [matchings, setMatchings] = useState([]);
-
-  const [openConfirmMatching, setOpenConfirmMatching] = useState(false);
-  const handleConfirmMatchingOpen = () => setOpenConfirmMatching(true);
-  const handleConfirmMatchingClose = () => setOpenConfirmMatching(false);
-
   const [allowedApps, setAllowedApps] = useState([]);
 
   const [openConfirmAllowedApps, setOpenConfirmAllowedApps] = useState(false);
   const handleConfirmAllowedAppsOpen = () => setOpenConfirmAllowedApps(true);
   const handleConfirmAllowedAppsClose = () => setOpenConfirmAllowedApps(false);
 
+  const [isUpdatingAllowedApps, setIsUpdatingAllowedApps] = useState(false);
+
   const [loading, setLoading] = useState(true);
+
+  const [openSetting, setOpenSetting] = useState(false);
+  const handleSettingOpen = () => setOpenSetting(true);
+  const handleSettingClose = () => setOpenSetting(false);
+
+  const [capsWarning, setCapsWarning] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const handleDeleteServer = async () => {
     if (deleteID) {
@@ -222,39 +213,8 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteMembershipPlan = async () => {
-    if (deleteMembershipPlanID) {
-      setIsMembershipPlanDeleting(true);
-      const res = await deleteMembershipPlan(deleteMembershipPlanID);
-      if (res.status) {
-        successMessage(res.message);
-      } else {
-        errorMessage(res.message);
-      }
-      setDeleteMembershipPlanID(null);
-      setIsMembershipPlanDeleting(false);
-      handleDeleteMembershipPlanClose();
-    } else {
-      errorMessage('No role selected for deletion');
-    }
-  };
-
-  const handleUpdateMatchings = async () => {
-    const res = await updatetWpServerMembershipPlanMatching(matchings);
-    if (res.status) {
-      const allowed_app_res = await getAllowedApps();
-      if (allowed_app_res.status) {
-        setAllowedApps(allowed_app_res.data);
-      }
-      successMessage(res.message);
-      setMatchings(res.data);
-    } else {
-      errorMessage(res.message);
-    }
-    handleConfirmMatchingClose();
-  };
-
   const handleUpdateAllowedApps = async () => {
+    setIsUpdatingAllowedApps(true);
     const res = await updateAllowedApps(allowedApps);
     if (res.status) {
       successMessage(res.message);
@@ -262,6 +222,7 @@ const Dashboard = () => {
     } else {
       errorMessage(res.message);
     }
+    setIsUpdatingAllowedApps(false);
     handleConfirmAllowedAppsClose();
   };
 
@@ -269,7 +230,7 @@ const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        await Promise.all([getServerList(), getAppListForImages(), getMembershipPlanList(), getAppList()]);
+        await Promise.all([getServerList(), getWordpressServerList(), getAppListForImages(), getAppList()]);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -278,19 +239,6 @@ const Dashboard = () => {
     };
 
     fetchData();
-    // eslint-disable-next-line
-  }, []);
-
-  useEffect(() => {
-    const fetchMatchingData = async () => {
-      const res = await getWpServerMembershipPlanMatching();
-      if (res.status) {
-        setMatchings(res.data);
-      } else {
-        errorMessage(res.message);
-      }
-    };
-    fetchMatchingData();
     // eslint-disable-next-line
   }, []);
 
@@ -326,9 +274,14 @@ const Dashboard = () => {
             <Stack alignItems="flex-start" spacing={3} sx={{ p: 3 }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ width: '100%' }}>
                 <Typography variant="h4">Login Server Management</Typography>
-                <IconButton onClick={logout}>
-                  <LogoutOutlined />
-                </IconButton>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <IconButton onClick={handleSettingOpen}>
+                    <SettingOutlined />
+                  </IconButton>
+                  <IconButton onClick={logout}>
+                    <LogoutOutlined />
+                  </IconButton>
+                </Stack>
               </Stack>
               <Typography variant="subtitle1" color="textSecondary">
                 Manage your login servers here. You can add, edit, or delete servers as needed.
@@ -469,127 +422,6 @@ const Dashboard = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Typography variant="h4">Membership Plan Management</Typography>
-              <Typography variant="subtitle1" color="textSecondary">
-                Manage your membership plans here. You can create, edit, or delete membership plans as needed.
-              </Typography>
-              <Button
-                variant="contained"
-                size="large"
-                disableElevation
-                onClick={() => {
-                  handleOpenMembershipPlan();
-                  setMembershipPlanToEdit(null);
-                }}
-              >
-                Add Membership Plan
-              </Button>
-              <TableContainer sx={{ width: { xs: '100%', md: '75%' } }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>WP Server</TableCell>
-                      <TableCell>Membership Plan</TableCell>
-                      <TableCell>Allowed Applications</TableCell>
-                    </TableRow>
-                  </TableHead>
-                </Table>
-              </TableContainer>
-              <TableContainer sx={{ width: { xs: '100%', md: '50%' } }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Membership Plan Name</TableCell>
-                      <TableCell>Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {membershipPlanList?.map((role) => (
-                      <TableRow key={`role_${role.id}`}>
-                        <TableCell>{role.plan_name}</TableCell>
-                        <TableCell>
-                          <Stack direction="row" alignItems="center" spacing={1}>
-                            <IconButton
-                              onClick={() => {
-                                setMembershipPlanToEdit(role);
-                                handleOpenMembershipPlan();
-                              }}
-                            >
-                              <EditOutlined />
-                            </IconButton>
-                            <IconButton
-                              onClick={() => {
-                                setDeleteMembershipPlanID(role.id);
-                                handleDeleteMembershipPlanOpen();
-                              }}
-                            >
-                              <DeleteOutlined />
-                            </IconButton>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {membershipPlanList?.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} align="center">
-                          <Typography color="textSecondary">No membership plans available. Please add a new one.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <Typography variant="h4">WordPress Server & Membership Plan Matchings</Typography>
-              <Typography variant="subtitle1" color="textSecondary">
-                Below is a table that matches each WordPress server with its corresponding membership plan for easy reference. The
-                membership plan name must match the plan name registered on the WordPress server. You must click the <b>UPDATE</b> button
-                for the changes to be applied to all servers.
-              </Typography>
-              <Button variant="contained" size="large" disableElevation onClick={handleConfirmMatchingOpen}>
-                Update
-              </Button>
-              <TableContainer sx={{ width: { xs: '100%', md: '100%' } }}>
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <b>WordPress Server \ Membership Plan</b>
-                      </TableCell>
-                      {membershipPlanList?.map((plan) => (
-                        <TableCell key={`plan_mapping_${plan.id}`}>{plan.plan_name}</TableCell>
-                      ))}
-                    </TableRow>
-                    {serverList
-                      ?.filter((server) => server?.type === 'wordpress')
-                      ?.map((server) => (
-                        <TableRow key={`server_mapping_${server.id}`}>
-                          <TableCell key={`app_mapping_${server.id}`}>{server.domain}</TableCell>
-                          {membershipPlanList?.map((plan) => (
-                            <TableCell key={`mapping_${server.id}_${plan.id}`}>
-                              <Checkbox
-                                checked={matchings.some(
-                                  (matching) => matching.server_name === server.domain && matching.membership_plan === plan.plan_name
-                                )}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setMatchings((prev) => [...prev, { server_name: server.domain, membership_plan: plan.plan_name }]);
-                                  } else {
-                                    setMatchings((prev) =>
-                                      prev.filter(
-                                        (matching) =>
-                                          !(matching.server_name === server.domain && matching.membership_plan === plan.plan_name)
-                                      )
-                                    );
-                                  }
-                                }}
-                              />
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
               <Typography variant="h4">Allowed Application List</Typography>
               <Typography variant="subtitle1" color="textSecondary">
                 Below is the list of applications that are allowed to be used with the wordpress login servers. You can manage the
@@ -609,33 +441,63 @@ const Dashboard = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {allowedApps?.map((app, idx0) => (
-                      <TableRow key={`allowed_app_${idx0}`}>
-                        <TableCell>{app.server_name}</TableCell>
-                        <TableCell>{app.membership_plan}</TableCell>
+                    {wpMembershipList?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} align="center">
+                          <Typography color="textSecondary">No wordpress servers available. Please add a new one.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {wpMembershipList?.map((server, idx0) => (
+                      <TableRow key={`wp_server_${idx0}`}>
+                        <TableCell>{server.domain}</TableCell>
+                        <TableCell>{server.membership_label}</TableCell>
                         <TableCell>
-                          <Grid container spacing={2} key={`grid_${idx0}`}>
+                          <Grid container spacing={1} key={`grid_${idx0}`}>
                             {appList?.map((application, idx) => (
                               <Grid key={`allowed_app_checkbox_${idx0}_${idx}`}>
                                 <FormControlLabel
                                   label={application}
                                   control={
                                     <Checkbox
-                                      checked={app.allowed_apps.includes(application)}
+                                      checked={
+                                        allowedApps
+                                          .find((a) => a.server_name === server.domain && a.membership_id === server.membership_id)
+                                          ?.allowed_apps.includes(application) || false
+                                      }
                                       onChange={(e) => {
-                                        const updatedAllowedApps = e.target.checked
-                                          ? [...app.allowed_apps, application]
-                                          : app.allowed_apps.filter((name) => name !== application);
-                                        setAllowedApps((prev) =>
-                                          prev.map((a) =>
-                                            a.server_name === app.server_name && a.membership_plan === app.membership_plan
-                                              ? { ...a, allowed_apps: updatedAllowedApps }
-                                              : a
-                                          )
-                                        );
+                                        const isChecked = e.target.checked;
+                                        setAllowedApps((prevAllowedApps) => {
+                                          const serverIndex = prevAllowedApps.findIndex(
+                                            (a) => a.server_name === server.domain && a.membership_id === server.membership_id
+                                          );
+                                          if (serverIndex > -1) {
+                                            const updatedAllowedApps = { ...prevAllowedApps[serverIndex] };
+                                            if (isChecked) {
+                                              updatedAllowedApps.allowed_apps.push(application);
+                                            } else {
+                                              updatedAllowedApps.allowed_apps = updatedAllowedApps.allowed_apps.filter(
+                                                (app) => app !== application
+                                              );
+                                            }
+                                            const newAllowedApps = [...prevAllowedApps];
+                                            newAllowedApps[serverIndex] = updatedAllowedApps;
+                                            return newAllowedApps;
+                                          } else {
+                                            return [
+                                              ...prevAllowedApps,
+                                              {
+                                                server_name: server.domain,
+                                                membership_id: server.membership_id,
+                                                allowed_apps: isChecked ? [application] : []
+                                              }
+                                            ];
+                                          }
+                                        });
                                       }}
                                     />
                                   }
+                                  sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' }, '& .MuiCheckbox-root': { p: 0.5 } }}
                                 />
                               </Grid>
                             ))}
@@ -1061,110 +923,6 @@ const Dashboard = () => {
           </Stack>
         </AlertCard>
       </Modal>
-      <Modal open={openMembershipPlan} onClose={handleCloseMembershipPlan}>
-        <SummaryCard title={membershipPlanToEdit ? 'Edit Membership Plan' : 'Add Membership Plan'} sx={{ width: { xs: '90%', sm: 480 } }}>
-          <Formik
-            enableReinitialize
-            initialValues={{
-              plan_name: membershipPlanToEdit?.plan_name ?? ''
-            }}
-            validationSchema={Yup.object().shape({
-              plan_name: Yup.string()
-                .max(255, 'Membership plan name length should be less than 255')
-                .nullable()
-                .required('Membership plan name is required')
-            })}
-            onSubmit={async (values, { setSubmitting }) => {
-              const res = membershipPlanToEdit
-                ? await updateMembershipPlan(membershipPlanToEdit?.id, values)
-                : await createMembershipPlan(values);
-              if (res.status) {
-                successMessage(res.message);
-              } else {
-                errorMessage(res.message);
-              }
-              setSubmitting(false);
-              handleCloseMembershipPlan();
-            }}
-          >
-            {({ errors, handleSubmit, handleBlur, handleChange, isSubmitting, touched, values }) => (
-              <form noValidate onSubmit={handleSubmit}>
-                <Box sx={{ width: '100%' }}>
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12 }}>
-                      <Typography>Membership Plan Name*</Typography>
-                      <OutlinedInput
-                        fullWidth
-                        minRows={3}
-                        name="plan_name"
-                        value={values.plan_name}
-                        onBlur={handleBlur}
-                        onChange={handleChange}
-                      />
-                      {touched.plan_name && errors.plan_name && (
-                        <FormHelperText error id="helper-text-plan_name">
-                          {errors.plan_name}
-                        </FormHelperText>
-                      )}
-                    </Grid>
-                    <Grid size={{ xs: 12 }}>
-                      <Stack direction="row" spacing={3} justifyContent="flex-end" sx={{ width: '100%' }}>
-                        <Button variant="outlined" size="large" disableElevation onClick={handleCloseMembershipPlan}>
-                          Cancel
-                        </Button>
-                        <Button variant="contained" size="large" disableElevation onClick={handleSubmit} disabled={isSubmitting}>
-                          {membershipPlanToEdit ? 'Update' : 'Save'}
-                        </Button>
-                      </Stack>
-                    </Grid>
-                  </Grid>
-                </Box>
-                <FocusError />
-              </form>
-            )}
-          </Formik>
-        </SummaryCard>
-      </Modal>
-      <Modal open={openDeleteMembershipPlan} onClose={handleDeleteMembershipPlanClose}>
-        <AlertCard title="Delete Membership Plan" sx={{ width: { xs: '90%', sm: '480px' } }}>
-          <Stack spacing={3} alignItems="center" justifyContent="center">
-            <Typography gutterBottom>Do you really want to delete this membership plan?</Typography>
-            <Stack direction="row" spacing={3} justifyContent="center">
-              <Button disableElevation variant="outlined" size="large" onClick={handleDeleteMembershipPlanClose} sx={{ width: 100 }}>
-                Cancel
-              </Button>
-              <Button
-                disableElevation
-                variant="contained"
-                size="large"
-                onClick={handleDeleteMembershipPlan}
-                disabled={isMembershipPlanDeleting}
-                sx={{ width: 100 }}
-              >
-                Yes
-              </Button>
-            </Stack>
-          </Stack>
-        </AlertCard>
-      </Modal>
-      <Modal open={openConfirmMatching} onClose={handleConfirmMatchingClose}>
-        <AlertCard title="Update WordPress Server & Membership Plan Matchings" sx={{ width: { xs: '90%', md: '720px' } }}>
-          <Stack spacing={3} alignItems="center" justifyContent="center">
-            <Typography gutterBottom>
-              Do you really want to update the WordPress server & membership plan matchings?
-              <br /> After updating the matching, please check the allowed application list for each wp server & membership plan.
-            </Typography>
-            <Stack direction="row" spacing={3} justifyContent="center">
-              <Button disableElevation variant="outlined" size="large" onClick={handleConfirmMatchingClose} sx={{ width: 100 }}>
-                Cancel
-              </Button>
-              <Button disableElevation variant="contained" size="large" onClick={handleUpdateMatchings} sx={{ width: 100 }}>
-                Yes
-              </Button>
-            </Stack>
-          </Stack>
-        </AlertCard>
-      </Modal>
       <Modal open={openConfirmAllowedApps} onClose={handleConfirmAllowedAppsClose}>
         <AlertCard title="Update Allowed Application List" sx={{ width: { xs: '90%', md: '720px' } }}>
           <Stack spacing={3} alignItems="center" justifyContent="center">
@@ -1175,12 +933,204 @@ const Dashboard = () => {
               <Button disableElevation variant="outlined" size="large" onClick={handleConfirmAllowedAppsClose} sx={{ width: 100 }}>
                 Cancel
               </Button>
-              <Button disableElevation variant="contained" size="large" onClick={handleUpdateAllowedApps} sx={{ width: 100 }}>
+              <Button
+                disableElevation
+                variant="contained"
+                size="large"
+                onClick={handleUpdateAllowedApps}
+                disabled={isUpdatingAllowedApps}
+                sx={{ width: 100 }}
+              >
                 Yes
               </Button>
             </Stack>
           </Stack>
         </AlertCard>
+      </Modal>
+      <Modal open={openSetting} onClose={handleSettingClose}>
+        <SummaryCard title="Update Password" sx={{ width: { xs: '90%', sm: 480 } }}>
+          <Formik
+            initialValues={{
+              currentPassword: '',
+              newPassword: '',
+              confirmNewPassword: ''
+            }}
+            validationSchema={Yup.object().shape({
+              currentPassword: Yup.string().required('Current password is required'),
+              newPassword: Yup.string().min(8, 'New password must be at least 8 characters').required('New password is required'),
+              confirmNewPassword: Yup.string()
+                .oneOf([Yup.ref('newPassword'), null], 'Passwords must match')
+                .required('Confirm new password is required')
+            })}
+            onSubmit={async (values, { setSubmitting }) => {
+              setSubmitting(true);
+              const response = await updatePassword(values);
+              setSubmitting(false);
+              if (response.status) {
+                handleSettingClose();
+                successMessage(response.message);
+                await sleep(2000);
+                logout();
+              } else {
+                errorMessage(response.message);
+              }
+            }}
+          >
+            {({ errors, handleSubmit, handleBlur, handleChange, isSubmitting, touched, values }) => (
+              <form noValidate onSubmit={handleSubmit}>
+                <Box sx={{ width: '100%' }}>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography>Current Password*</Typography>
+                      <OutlinedInput
+                        fullWidth
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        color={capsWarning ? 'warning' : 'primary'}
+                        name="currentPassword"
+                        value={values.currentPassword}
+                        error={Boolean(touched.currentPassword && errors.currentPassword)}
+                        onBlur={(event) => {
+                          setCapsWarning(false);
+                          handleBlur(event);
+                        }}
+                        onKeyDown={(keyEvent) => {
+                          if (keyEvent.getModifierState('CapsLock')) {
+                            setCapsWarning(true);
+                          } else {
+                            setCapsWarning(false);
+                          }
+                        }}
+                        onChange={handleChange}
+                        endAdornment={
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowCurrentPassword((prev) => !prev)}
+                              onMouseDown={(e) => e.preventDefault()}
+                              edge="end"
+                            >
+                              {showCurrentPassword ? <VisibilityOutlined /> : <VisibilityOffOutlined />}
+                            </IconButton>
+                          </InputAdornment>
+                        }
+                      />
+                      {capsWarning && (
+                        <Typography variant="caption" sx={{ color: 'warning.main' }} id="warning-helper-text-password-login">
+                          Caps lock on!
+                        </Typography>
+                      )}
+                      {touched.currentPassword && errors.currentPassword && (
+                        <FormHelperText error id="helper-text-currentPassword">
+                          {errors.currentPassword}
+                        </FormHelperText>
+                      )}
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography>New Password*</Typography>
+                      <OutlinedInput
+                        fullWidth
+                        type={showNewPassword ? 'text' : 'password'}
+                        color={capsWarning ? 'warning' : 'primary'}
+                        name="newPassword"
+                        value={values.newPassword}
+                        onBlur={(event) => {
+                          setCapsWarning(false);
+                          handleBlur(event);
+                        }}
+                        onKeyDown={(keyEvent) => {
+                          if (keyEvent.getModifierState('CapsLock')) {
+                            setCapsWarning(true);
+                          } else {
+                            setCapsWarning(false);
+                          }
+                        }}
+                        onChange={handleChange}
+                        endAdornment={
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowNewPassword((prev) => !prev)}
+                              onMouseDown={(e) => e.preventDefault()}
+                              edge="end"
+                            >
+                              {showNewPassword ? <VisibilityOutlined /> : <VisibilityOffOutlined />}
+                            </IconButton>
+                          </InputAdornment>
+                        }
+                        error={Boolean(touched.newPassword && errors.newPassword)}
+                      />
+                      {capsWarning && (
+                        <Typography variant="caption" sx={{ color: 'warning.main' }} id="warning-helper-text-password-login">
+                          Caps lock on!
+                        </Typography>
+                      )}
+                      {touched.newPassword && errors.newPassword && (
+                        <FormHelperText error id="helper-text-newPassword">
+                          {errors.newPassword}
+                        </FormHelperText>
+                      )}
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography>Confirm New Password*</Typography>
+                      <OutlinedInput
+                        fullWidth
+                        type={showConfirmNewPassword ? 'text' : 'password'}
+                        color={capsWarning ? 'warning' : 'primary'}
+                        name="confirmNewPassword"
+                        value={values.confirmNewPassword}
+                        error={Boolean(touched.confirmNewPassword && errors.confirmNewPassword)}
+                        onBlur={(event) => {
+                          setCapsWarning(false);
+                          handleBlur(event);
+                        }}
+                        onKeyDown={(keyEvent) => {
+                          if (keyEvent.getModifierState('CapsLock')) {
+                            setCapsWarning(true);
+                          } else {
+                            setCapsWarning(false);
+                          }
+                        }}
+                        endAdornment={
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label="toggle password visibility"
+                              onClick={() => setShowConfirmNewPassword((prev) => !prev)}
+                              onMouseDown={(e) => e.preventDefault()}
+                              edge="end"
+                            >
+                              {showConfirmNewPassword ? <VisibilityOutlined /> : <VisibilityOffOutlined />}
+                            </IconButton>
+                          </InputAdornment>
+                        }
+                        onChange={handleChange}
+                      />
+                      {capsWarning && (
+                        <Typography variant="caption" sx={{ color: 'warning.main' }} id="warning-helper-text-password-login">
+                          Caps lock on!
+                        </Typography>
+                      )}
+                      {touched.confirmNewPassword && errors.confirmNewPassword && (
+                        <FormHelperText error id="helper-text-confirmNewPassword">
+                          {errors.confirmNewPassword}
+                        </FormHelperText>
+                      )}
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Stack direction="row" spacing={3} justifyContent="flex-end" sx={{ width: '100%' }}>
+                        <Button variant="outlined" size="large" disableElevation onClick={handleSettingClose}>
+                          Cancel
+                        </Button>
+                        <Button variant="contained" size="large" disableElevation onClick={handleSubmit} disabled={isSubmitting}>
+                          Update
+                        </Button>
+                      </Stack>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </form>
+            )}
+          </Formik>
+        </SummaryCard>
       </Modal>
     </>
   );

@@ -1,11 +1,11 @@
 // action - state management
-import { SERVER_LIST, IMAGE_APP_LIST, MEMBERSHIP_PLAN_LIST, APP_LIST } from './actions';
+import { SERVER_LIST, IMAGE_APP_LIST, APP_LIST, WP_MEMBERSHIP_LIST } from './actions';
 
 // initial state
 export const initialState = {
   serverList: [],
+  wpMembershipList: [],
   imageAppList: [],
-  membershipPlanList: [],
   appList: []
 };
 
@@ -18,18 +18,18 @@ const main = (state = initialState, action) => {
         serverList
       };
     }
+    case WP_MEMBERSHIP_LIST: {
+      const { wpMembershipList } = action.payload;
+      return {
+        ...state,
+        wpMembershipList
+      };
+    }
     case IMAGE_APP_LIST: {
       const { imageAppList } = action.payload;
       return {
         ...state,
         imageAppList
-      };
-    }
-    case MEMBERSHIP_PLAN_LIST: {
-      const { membershipPlanList } = action.payload;
-      return {
-        ...state,
-        membershipPlanList
       };
     }
     case APP_LIST: {

@@ -1,7 +1,7 @@
 import React, { createContext, useReducer } from 'react';
 import PropTypes from 'prop-types';
 
-import { SERVER_LIST, IMAGE_APP_LIST, MEMBERSHIP_PLAN_LIST, APP_LIST } from 'reducers/actions';
+import { SERVER_LIST, IMAGE_APP_LIST, APP_LIST, WP_MEMBERSHIP_LIST } from 'reducers/actions';
 import MainReducer, { initialState } from 'reducers/main';
 import useAuth from 'hooks/useAuth';
 
@@ -12,12 +12,34 @@ export const MainProvider = ({ children }) => {
 
   const { axiosServices } = useAuth();
 
+  const updatePassword = async (passwordData) => {
+    try {
+      const response = await axiosServices.post('/update_password', passwordData, { withCredentials: true });
+      return { status: true, message: 'Password updated successfully. Please log in again.' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message };
+    }
+  };
+
   const getServerList = async () => {
     try {
       const response = await axiosServices.get('/servers', { withCredentials: true });
       dispatch({
         type: SERVER_LIST,
         payload: { serverList: response.data.servers }
+      });
+      return { status: true, message: '' };
+    } catch (error) {
+      return { status: false, message: error.response?.data?.message || error.message || 'Failed to fetch server list' };
+    }
+  };
+
+  const getWordpressServerList = async () => {
+    try {
+      const response = await axiosServices.get('/wordpress_memberships', { withCredentials: true });
+      dispatch({
+        type: WP_MEMBERSHIP_LIST,
+        payload: { wpMembershipList: response.data.wordpress_memberships }
       });
       return { status: true, message: '' };
     } catch (error) {
@@ -121,58 +143,6 @@ export const MainProvider = ({ children }) => {
     }
   };
 
-  const createMembershipPlan = async (membershipData) => {
-    try {
-      const response = await axiosServices.post('/membership_plans', membershipData, { withCredentials: true });
-      dispatch({
-        type: MEMBERSHIP_PLAN_LIST,
-        payload: { membershipPlanList: response.data.membership_plans }
-      });
-      return { status: true, message: response.data.message || 'Membership plan created successfully' };
-    } catch (error) {
-      return { status: false, message: error.response?.data?.message || error.message };
-    }
-  };
-
-  const updateMembershipPlan = async (id, membershipData) => {
-    try {
-      const response = await axiosServices.put(`/membership_plans/${id}`, membershipData, { withCredentials: true });
-      dispatch({
-        type: MEMBERSHIP_PLAN_LIST,
-        payload: { membershipPlanList: response.data.membership_plans }
-      });
-      return { status: true, message: response.data.message || 'Membership plan updated successfully' };
-    } catch (error) {
-      return { status: false, message: error.response?.data?.message || error.message };
-    }
-  };
-
-  const deleteMembershipPlan = async (id) => {
-    try {
-      const response = await axiosServices.delete(`/membership_plans/${id}`, { withCredentials: true });
-      dispatch({
-        type: MEMBERSHIP_PLAN_LIST,
-        payload: { membershipPlanList: response.data.membership_plans }
-      });
-      return { status: true, message: response.data.message || 'Membership plan deleted successfully' };
-    } catch (error) {
-      return { status: false, message: error.response?.data?.message || error.message };
-    }
-  };
-
-  const getMembershipPlanList = async () => {
-    try {
-      const response = await axiosServices.get('/membership_plans', { withCredentials: true });
-      dispatch({
-        type: MEMBERSHIP_PLAN_LIST,
-        payload: { membershipPlanList: response.data.membership_plans }
-      });
-      return { status: true, message: '' };
-    } catch (error) {
-      return { status: false, message: error.response?.data?.message || error.message || 'Failed to fetch membership plan list' };
-    }
-  };
-
   const getAppList = async () => {
     try {
       const response = await axiosServices.get('/app_list', { withCredentials: true });
@@ -183,28 +153,6 @@ export const MainProvider = ({ children }) => {
       return { status: true, message: '' };
     } catch (error) {
       return { status: false, message: error.response?.data?.message || error.message || 'Failed to fetch app list' };
-    }
-  };
-
-  const getWpServerMembershipPlanMatching = async () => {
-    try {
-      const response = await axiosServices.get('/wp_server_membership_plan_matching', { withCredentials: true });
-      return { status: true, data: response.data.matchings || [], message: '' };
-    } catch (error) {
-      return { status: false, data: [], message: error.response?.data?.message || error.message || 'Failed to fetch matching data' };
-    }
-  };
-
-  const updatetWpServerMembershipPlanMatching = async (matchings) => {
-    try {
-      const response = await axiosServices.put('/wp_server_membership_plan_matching', { matchings }, { withCredentials: true });
-      return { status: true, data: response.data.matchings || [], message: response.data.message || 'Matching data set successfully' };
-    } catch (error) {
-      return {
-        status: false,
-        data: [],
-        message: error.response?.data?.message || error.message || 'Failed to set matching data, Please try again'
-      };
     }
   };
 
@@ -234,20 +182,16 @@ export const MainProvider = ({ children }) => {
     <MainContext.Provider
       value={{
         ...state,
+        updatePassword,
         getServerList,
+        getWordpressServerList,
         createServer,
         updateServer,
         deleteServer,
         uploadImages,
         getAppListForImages,
         deleteAppForImages,
-        createMembershipPlan,
-        updateMembershipPlan,
-        deleteMembershipPlan,
-        getMembershipPlanList,
         getAppList,
-        getWpServerMembershipPlanMatching,
-        updatetWpServerMembershipPlanMatching,
         getAllowedApps,
         updateAllowedApps
       }}
