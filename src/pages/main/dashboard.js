@@ -438,6 +438,7 @@ const Dashboard = () => {
                       <TableCell>Wordpress Server</TableCell>
                       <TableCell>Membership Plan</TableCell>
                       <TableCell>Allowed Applications</TableCell>
+                      <TableCell>Screaming Frog</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -489,7 +490,8 @@ const Dashboard = () => {
                                               {
                                                 server_name: server.domain,
                                                 membership_id: server.membership_id,
-                                                allowed_apps: isChecked ? [application] : []
+                                                allowed_apps: isChecked ? [application] : [],
+                                                frog: false
                                               }
                                             ];
                                           }
@@ -502,6 +504,36 @@ const Dashboard = () => {
                               </Grid>
                             ))}
                           </Grid>
+                        </TableCell>
+                        <TableCell>
+                          <Checkbox
+                            checked={allowedApps.find((a) => a.server_name === server.domain && a.membership_id === server.membership_id)?.frog || false}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setAllowedApps((prevAllowedApps) => {
+                                const serverIndex = prevAllowedApps.findIndex(
+                                  (a) => a.server_name === server.domain && a.membership_id === server.membership_id
+                                );
+                                if (serverIndex > -1) {
+                                  const updatedAllowedApps = { ...prevAllowedApps[serverIndex] };
+                                  updatedAllowedApps.frog = isChecked;
+                                  const newAllowedApps = [...prevAllowedApps];
+                                  newAllowedApps[serverIndex] = updatedAllowedApps;
+                                  return newAllowedApps;
+                                } else {
+                                  return [
+                                    ...prevAllowedApps,
+                                    {
+                                      server_name: server.domain,
+                                      membership_id: server.membership_id,
+                                      allowed_apps: [],
+                                      frog: isChecked
+                                    }
+                                  ];
+                                }
+                              });
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
