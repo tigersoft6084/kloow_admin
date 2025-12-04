@@ -53,7 +53,9 @@ const Dashboard = () => {
     getAppList,
     appList,
     getAllowedApps,
-    updateAllowedApps
+    updateAllowedApps,
+    getFrogVersions,
+    updateFrogVersions
   } = useMain();
   const { logout } = useAuth();
   const { errorMessage, successMessage } = useSnackbar();
@@ -112,6 +114,19 @@ const Dashboard = () => {
   const [isUpdatingAllowedApps, setIsUpdatingAllowedApps] = useState(false);
 
   const [loading, setLoading] = useState(true);
+
+  const [frogVersions, setFrogVersions] = useState([]);
+  const [openFrogEdit, setOpenFrogEdit] = useState(false);
+  const handleFrogEditOpen = () => setOpenFrogEdit(true);
+  const handleFrogEditClose = () => setOpenFrogEdit(false);
+
+  const [frogToEdit, setFrogToEdit] = useState(null);
+  const [deleteFrogID, setDeleteFrogID] = useState(null);
+  const [openDeleteFrog, setOpenDeleteFrog] = useState(false);
+  const handleDeleteFrogOpen = () => setOpenDeleteFrog(true);
+  const handleDeleteFrogClose = () => setOpenDeleteFrog(false);
+  const [isDeletingFrog, setIsDeletingFrog] = useState(false);
+  const [isUpdatingFrog, setIsUpdatingFrog] = useState(false);
 
   const [openSetting, setOpenSetting] = useState(false);
   const handleSettingOpen = () => setOpenSetting(true);
@@ -226,6 +241,50 @@ const Dashboard = () => {
     handleConfirmAllowedAppsClose();
   };
 
+  const handleDeleteFrogVersion = async () => {
+    if (deleteFrogID) {
+      setIsDeletingFrog(true);
+      const updatedVersions = frogVersions.filter((v) => v.id !== deleteFrogID);
+      const res = await updateFrogVersions(updatedVersions);
+      if (res.status) {
+        successMessage(res.message);
+        setFrogVersions(updatedVersions);
+      } else {
+        errorMessage(res.message);
+      }
+      setDeleteFrogID(null);
+      setIsDeletingFrog(false);
+      handleDeleteFrogClose();
+    } else {
+      errorMessage('No frog version selected for deletion');
+    }
+  };
+
+  const handleUpdateFrogVersion = async (values) => {
+    setIsUpdatingFrog(true);
+    let updatedVersions;
+
+    if (frogToEdit) {
+      // Update existing version
+      updatedVersions = frogVersions.map((v) => (v.id === frogToEdit.id ? { ...v, ...values } : v));
+    } else {
+      // Create new version with unique ID
+      const newId = Math.max(...frogVersions.map((v) => v.id || 0), 0) + 1;
+      updatedVersions = [...frogVersions, { id: newId, ...values }];
+    }
+
+    const res = await updateFrogVersions(updatedVersions);
+    if (res.status) {
+      successMessage(res.message);
+      setFrogVersions(res.data || updatedVersions);
+      setFrogToEdit(null);
+    } else {
+      errorMessage(res.message);
+    }
+    setIsUpdatingFrog(false);
+    handleFrogEditClose();
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -252,6 +311,20 @@ const Dashboard = () => {
       }
     };
     fetchAllowedApps();
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    const fetchFrogVersions = async () => {
+      const res = await getFrogVersions();
+      console.log('Frog Versions:', res);
+      if (res.status) {
+        setFrogVersions(res.data || []);
+      } else {
+        errorMessage(res.message);
+      }
+    };
+    fetchFrogVersions();
     // eslint-disable-next-line
   }, []);
 
@@ -592,6 +665,67 @@ const Dashboard = () => {
                       <TableRow>
                         <TableCell colSpan={6} align="center">
                           <Typography color="textSecondary">No application images available. Please add a new one.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Typography variant="h4">Screaming Frog Versions</Typography>
+              <Typography variant="subtitle1" color="textSecondary">
+                Manage Screaming Frog versions here. You can add, edit, or delete versions as needed.
+              </Typography>
+              {/* <Button
+                variant="contained"
+                size="large"
+                disableElevation
+                onClick={() => {
+                  setFrogToEdit(null);
+                  handleFrogEditOpen();
+                }}
+              >
+                Add Frog Version
+              </Button> */}
+              <TableContainer sx={{ width: { xs: '100%', md: '50%' } }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Version</TableCell>
+                      <TableCell>Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {frogVersions?.map((frog) => (
+                      <TableRow key={`frog_${frog.id}`}>
+                        <TableCell>{frog.name}</TableCell>
+                        <TableCell>{frog.version}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <IconButton
+                              onClick={() => {
+                                setFrogToEdit(frog);
+                                handleFrogEditOpen();
+                              }}
+                            >
+                              <EditOutlined />
+                            </IconButton>
+                            <IconButton
+                              onClick={() => {
+                                setDeleteFrogID(frog.id);
+                                handleDeleteFrogOpen();
+                              }}
+                            >
+                              <DeleteOutlined />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {frogVersions?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} align="center">
+                          <Typography color="textSecondary">No frog versions available. Please add a new one.</Typography>
                         </TableCell>
                       </TableRow>
                     )}
@@ -947,6 +1081,97 @@ const Dashboard = () => {
                 size="large"
                 onClick={handleDeleteApp}
                 disabled={isAppDeleting}
+                sx={{ width: 100 }}
+              >
+                Yes
+              </Button>
+            </Stack>
+          </Stack>
+        </AlertCard>
+      </Modal>
+      <Modal open={openFrogEdit} onClose={handleFrogEditClose}>
+        <SummaryCard title={frogToEdit ? 'Edit Frog Version' : 'Add Frog Version'} sx={{ width: { xs: '90%', sm: 480 } }}>
+          <Formik
+            enableReinitialize
+            initialValues={{
+              name: frogToEdit?.name ?? '',
+              version: frogToEdit?.version ?? ''
+            }}
+            validationSchema={Yup.object().shape({
+              name: Yup.string().max(255, 'Name length should be less than 255').nullable().required('Name is required'),
+              version: Yup.string().max(255, 'Version length should be less than 255').nullable().required('Version is required')
+            })}
+            onSubmit={async (values, { setSubmitting }) => {
+              await handleUpdateFrogVersion(values);
+              setSubmitting(false);
+            }}
+          >
+            {({ errors, handleSubmit, handleBlur, handleChange, isSubmitting, touched, values }) => (
+              <form noValidate onSubmit={handleSubmit}>
+                <Box sx={{ width: '100%' }}>
+                  <Grid container spacing={3}>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography>Name*</Typography>
+                      <OutlinedInput
+                        fullWidth
+                        name="name"
+                        value={values.name}
+                        onBlur={handleBlur}
+                        onChange={handleChange}
+                      />
+                      {touched.name && errors.name && (
+                        <FormHelperText error id="helper-text-name">
+                          {errors.name}
+                        </FormHelperText>
+                      )}
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Typography>Version*</Typography>
+                      <OutlinedInput
+                        fullWidth
+                        name="version"
+                        value={values.version}
+                        onBlur={handleBlur}
+                        onChange={handleChange}
+                      />
+                      {touched.version && errors.version && (
+                        <FormHelperText error id="helper-text-version">
+                          {errors.version}
+                        </FormHelperText>
+                      )}
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Stack direction="row" spacing={3} justifyContent="flex-end" sx={{ width: '100%' }}>
+                        <Button variant="outlined" size="large" disableElevation onClick={handleFrogEditClose}>
+                          Cancel
+                        </Button>
+                        <Button variant="contained" size="large" disableElevation onClick={handleSubmit} disabled={isSubmitting || isUpdatingFrog}>
+                          {frogToEdit ? 'Update' : 'Save'}
+                        </Button>
+                      </Stack>
+                    </Grid>
+                  </Grid>
+                </Box>
+                <FocusError />
+              </form>
+            )}
+          </Formik>
+        </SummaryCard>
+      </Modal>
+      <Modal open={openDeleteFrog} onClose={handleDeleteFrogClose}>
+        <AlertCard title="Delete Frog Version" sx={{ width: { xs: '90%', sm: '480px' } }}>
+          <Stack spacing={3} alignItems="center" justifyContent="center">
+            <Typography gutterBottom>Do you really want to delete this frog version?</Typography>
+            <Stack direction="row" spacing={3} justifyContent="center">
+              <Button disableElevation variant="outlined" size="large" onClick={handleDeleteFrogClose} sx={{ width: 100 }}>
+                Cancel
+              </Button>
+              <Button
+                disableElevation
+                variant="contained"
+                size="large"
+                onClick={handleDeleteFrogVersion}
+                disabled={isDeletingFrog}
                 sx={{ width: 100 }}
               >
                 Yes

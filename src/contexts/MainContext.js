@@ -178,6 +178,28 @@ export const MainProvider = ({ children }) => {
     }
   };
 
+  const getFrogVersions = async () => {
+    try {
+      const response = await axiosServices.get('/frog_versions', { withCredentials: true });
+      return { status: true, data: response.data.frog_versions || [], message: '' };
+    } catch (error) {
+      return { status: false, data: [], message: error.response?.data?.message || error.message || 'Failed to fetch frog versions' };
+    }
+  }
+
+  const updateFrogVersions = async (frog_versions) => {
+    try {
+      const response = await axiosServices.put('/frog_versions', { frog_versions }, { withCredentials: true });
+      return {
+        status: true,
+        data: response.data.frog_versions || [],
+        message: response.data.message || 'Frog versions updated successfully'
+      };
+    } catch (error) {
+      return { status: false, data: [], message: error.response?.data?.message || error.message || 'Failed to update frog versions' };
+    }
+  };
+
   return (
     <MainContext.Provider
       value={{
@@ -193,7 +215,9 @@ export const MainProvider = ({ children }) => {
         deleteAppForImages,
         getAppList,
         getAllowedApps,
-        updateAllowedApps
+        updateAllowedApps,
+        getFrogVersions,
+        updateFrogVersions
       }}
     >
       {children}
